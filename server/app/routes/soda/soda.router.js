@@ -36,6 +36,7 @@ router.put('/',function(req,res,next){
 
 	consumer.query().withDataset(datasetId)
 		.select(columns).limit(1000)
+		.groupBy(columns[0])
 		.getRows()
 		.on('success',function(rows){
 			res.send({graphData: rows, columns: columns});
