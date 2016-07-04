@@ -39,8 +39,8 @@ app.directive('barChart', function(d3Service, $window, DataFactory) {
                         && obj[scope.columns[1].name]
                         && (!!Number(obj[scope.columns[1].name]) || Number(obj[scope.columns[1].name]) === 0));
 
-                   
-                    let groupedData = DataFactory.groupByCategory(filteredData, scope.columns[0].name, scope.columns[1].name);
+                    let groupType = scope.settings.groupType || 'total';
+                    let groupedData = DataFactory.groupByCategory(filteredData, scope.columns[0].name, scope.columns[1].name, groupType);
                     groupedData = DataFactory.orderByCategory(groupedData, scope.columns[0].name, scope.columns[0].type);
                     
 
@@ -149,7 +149,7 @@ app.directive('barChart', function(d3Service, $window, DataFactory) {
                         .attr("x", (width / 2))             
                         .attr("y", (margin.top / 2))
                         .attr("text-anchor", "middle")    
-                        .text(title);
+                        .text(title.toUpperCase());
 
                 };
             });

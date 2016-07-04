@@ -30,7 +30,7 @@ app.controller('DatasetDetailsCtrl', function($scope, $timeout, $state, $statePa
         if ($scope.dataset.metadata) domain = $scope.dataset.metadata.domain;
         DatasetFactory.addDataset($scope.user, $scope.dataset.resource, domain)
             .then(function(data) {
-
+                console.log(data);
                 if (data[1]) {
                     $scope.success = true;
                     $scope.message = 'You have successfully added this dataset!';
@@ -39,9 +39,6 @@ app.controller('DatasetDetailsCtrl', function($scope, $timeout, $state, $statePa
                     $scope.success = false;
                     $scope.message = 'You already have this dataset';
                 }
-
-                $scope.success = data.success;
-                $scope.message = data.message;
                 $scope.userDataset=true;
                 $scope.addedDataset = true; 
                 $timeout(function () {

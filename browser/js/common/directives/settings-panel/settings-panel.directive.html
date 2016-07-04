@@ -1,8 +1,7 @@
 <div>
-  <button class="btn download-btn" type="button" ng-click="downloadGraph()">Download Image of Graph</button>
-  <h3 class="graph-header">Adjust Graph Settings</h3>
+  <h4 class="graph-header">Adjust Graph Settings</h4>
   <div class="row">
-    <div class="col-sm-3 col-xs-12 panel-group">
+    <div class="col-xs-12 panel-group">
       <div class="panel settings-panel">
         <div class="panel-heading">     
           <a data-toggle="collapse" data-target="#view-gensettings-collapse" href="#"><h5>Graph Settings</h5></a>
@@ -63,7 +62,7 @@
         </div>
       </div>
     </div>
-    <div class="col-sm-3 col-xs-12 panel-group" ng-show="graphType==='pieChart'">
+    <div class="col-xs-12 panel-group" ng-show="graphType==='pieChart'">
       <div class="panel settings-panel">
         <div class="panel-heading"> 
           <a data-toggle="collapse" data-target="#view-piesettings-collapse" href="#"><h5>Legend Settings</h5></a>
@@ -71,7 +70,7 @@
         <div id="view-piesettings-collapse" class="panel-collapse collapse settings-collapse">
           <div id="general">
             <div class="row">
-              <div class="form-group col-xs-12">
+              <div class="form-group col-xs-6">
                 <label for="displayType" class="control-label">Display Type</label>
                 <div>
                   <select class="form-control" name="displayType" type="text" ng-model="settings.displayType">
@@ -80,12 +79,21 @@
                   </select>
                 </div>
               </div>
+              <div class="form-group col-xs-6">
+                <label for="groupType" class="control-label">Group By Type</label>
+                <div>
+                  <select class="form-control" name="groupType" type="text" ng-model="settings.groupType">
+                    <option value="total">Total</option>
+                    <option value="mean">Mean</option>
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-    <div class="col-sm-3 col-xs-12 panel-group" ng-hide="graphType==='pieChart'">
+    <div class="col-xs-12 panel-group" ng-hide="graphType==='pieChart'">
       <div class="panel settings-panel">
         <div class="panel-heading"> 
           <a data-toggle="collapse" data-target="#view-xsettings-collapse" href="#"><h5>X Axis Settings</h5></a>
@@ -97,6 +105,17 @@
                 <label for="xAxisLabel" class="control-label">X Axis Label</label>
                 <div>
                   <input class="form-control" name="xAxisLabel" type="text" ng-model="settings.xAxisLabel" required>
+                </div>
+              </div>
+            </div>
+            <div class="row" ng-show="graphType==='barChart'">
+              <div class="form-group col-xs-12">
+                <label for="groupType" class="control-label">Group By Type</label>
+                <div>
+                  <select class="form-control" name="groupType" type="text" ng-model="settings.groupType">
+                    <option value="total">Total</option>
+                    <option value="mean">Mean</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -118,7 +137,7 @@
         </div>
       </div>
     </div>
-    <div class="col-sm-3 col-xs-12 panel-group" ng-hide="graphType==='pieChart'">
+    <div class="col-xs-12 panel-group" ng-hide="graphType==='pieChart'">
       <div class="panel settings-panel">
         <div class="panel-heading">
           <a data-toggle="collapse" data-target="#view-ysettings-collapse" href="#"><h5>Y Axis Settings</h5></a>
@@ -151,7 +170,7 @@
         </div>
       </div>
     </div>
-    <div class="col-sm-3 col-xs-12 panel-group">
+    <div class="col-xs-12 panel-group">
       <div class="panel settings-panel">
         <div class="panel-heading">
           <a data-toggle="collapse" data-target="#view-changedata-collapse" href="#"><h5>Change Data</h5></a>
@@ -179,4 +198,5 @@
       </div>
     </div>
   </div>
+  <button class="btn download-btn" type="button" ng-click="downloadGraph()">Download Image of Graph</button>
 </div>

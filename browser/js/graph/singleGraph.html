@@ -1,6 +1,12 @@
 <section class="row single-graph">	
 	<div class="row graphsettings-container">
-		<div class="col-xs-12 settings-container">
+		<div class="graph-container col-sm-9 col-xs-12">
+			  <scatterplot-graph settings="settings" ng-if="graphType === 'scatterPlot'" rows="data" columns="columns"></scatterplot-graph>
+			  <line-graph settings="settings" ng-if="graphType === 'lineGraph'" rows="data" columns="columns"></line-graph>
+			  <pie-chart settings="settings" rows="data" columns="columns" ng-if="graphType === 'pieChart'"></pie-chart>
+			  <bar-chart settings="settings" rows="data" columns="columns" ng-if="graphType === 'barChart'"></bar-chart>
+		</div>
+		<div class="col-sm-3 col-xs-12 settings-container">
 			<div class="row">
 			    <header class="row graph-alert-header">
 			      <div ng-show="addedGraph" ng-class="{'alert-success': success, 'alert-danger': !success}" class="animate-show animate-hide">{{message}}</div>
@@ -9,12 +15,6 @@
 			    <header>
 			  </div>
 			<settings-panel></settings-panel>
-		</div>
-		<div class="graph-container col-xs-12">
-			  <scatterplot-graph settings="settings" ng-if="graphType === 'scatterPlot'" rows="data" columns="columns"></scatterplot-graph>
-			  <line-graph settings="settings" ng-if="graphType === 'lineGraph'" rows="data" columns="columns"></line-graph>
-			  <pie-chart settings="settings" rows="data" columns="columns" ng-if="graphType === 'pieChart'"></pie-chart>
-			  <bar-chart settings="settings" rows="data" columns="columns" ng-if="graphType === 'barChart'"></bar-chart>
 		</div>
 	</div>
 </section>

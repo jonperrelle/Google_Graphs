@@ -40,6 +40,18 @@ app.factory('ValidationFactory', function () {
               return false;
             },
 
+
+
+            // noRepeats: function(data, col){
+            //   let repeats = false,
+            //   repeatTable = {};
+            //   data.forEach(function(elem){
+            //     let currentData = elem[col];
+            //     repeatTable[currentData] = repeatTable[currentData] || 0;
+
+            //   })
+            // }
+
    };
 });
 

@@ -1,0 +1,49 @@
+// footer {
+
+//   nav {
+//     display: block;
+//     position: fixed;
+//     width: 100%;
+//     background: #6a6d70;
+//     height: 80px;
+//     }
+
+//   .container {
+//     width: 91%;
+//     max-width: 1340px;
+//     padding-top: 20px;
+//   }
+
+//    .btn.navbar-button {
+//     color: #ffffff;
+//     background: #599ad6;
+//     margin-top: 10px;
+//     outline: none !important;
+//     margin-right: 30px;
+//   }
+
+//   .btn.navbar-button:hover {
+//     background: #e6e9ed;
+//     color: #599ad6;
+//     border: 1px solid #599ad6;
+//   }
+// }
+
+// html {
+//   position: relative;
+//   min-height: 100%;
+// }
+
+// body {
+//   /* Margin bottom by footer height */
+//   margin-bottom: 60px;
+// }
+footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  /* Set the fixed height of the footer here */
+  height: 60px;
+  background-color: #f5f5f5;
+}
+

@@ -45,8 +45,16 @@ app.directive('pieChart', function(d3Service, $window, DataFactory) {
 
                         let filteredData = scope.rows.filter(obj => Number(obj[scope.columns[1].name]) > 0);
                         
-                        let groupedData = DataFactory.groupByCategory(filteredData, scope.columns[0].name, scope.columns[1].name);
+                        let groupType = scope.settings.groupType || 'total';
+
+                        let groupedData = DataFactory.groupByCategory(filteredData, scope.columns[0].name, scope.columns[1].name, groupType);
                         groupedData = DataFactory.orderByCategory(groupedData, scope.columns[0].name);
+
+                        if(!DataFactory.withinLength(groupedData, scope.columns[0].name, 30)) {
+                                scope.validate = false;
+                                return;
+                            }
+
                         let groupedTotal = 0;
                         groupedData.forEach( a => groupedTotal += a[scope.columns[1].name]);
                         //uses build in d3 method to create color scale
@@ -108,7 +116,7 @@ app.directive('pieChart', function(d3Service, $window, DataFactory) {
                             .attr("x", 0)             
                             .attr("y", (radius * -1.5) + margin.top/2)
                             .attr("text-anchor", "middle")    
-                            .text(title);
+                            .text(title.toUpperCase());
 
                         //add the text
                         // arcs.append("text").attr("transform", function(d) {
