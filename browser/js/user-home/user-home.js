@@ -30,9 +30,6 @@ app.controller('UserHomeCtrl', function($scope, $state, UploadFactory, Session, 
                     let allColumns = Object.keys(rows.data[0]);
                     $state.go('userSingleGraph', { userId: $scope.user.id, graphId: graph.id, dataset: graph.dataset, graphType: graph.graphType, settings: graph.setting, data: rows.data, columns: graph.columns, allColumns: allColumns });
                 }
-
-
-
             })
             .catch();
     };
@@ -42,11 +39,18 @@ app.controller('UserHomeCtrl', function($scope, $state, UploadFactory, Session, 
         $localStorage.column2 = null;
         DatasetFactory.getOneUserDataset(dataset, $scope.user)
             .then(rows => {
+
+                let obj = { userId: $scope.user.id, datasetId: dataset.id };
+
                 if (dataset.socrataId) {
-                    $state.go('userDatasetDetails', { userId: $scope.user.id, datasetId: dataset.id, dataset: dataset, rows: rows });
+                    obj.dataset = dataset;
+                    obj.rows = rows;
                 } else {
-                    $state.go('userDatasetDetails', { userId: $scope.user.id, datasetId: dataset.id, dataset: rows.dataset, rows: rows.data });
+                    obj.dataset = rows.dataset;
+                    obj.rows = rows.data;
                 }
+
+                $state.go('userDatasetDetails', obj);
             });
     };
 
