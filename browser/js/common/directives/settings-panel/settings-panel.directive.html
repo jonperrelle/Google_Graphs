@@ -9,10 +9,16 @@
         <div id="view-gensettings-collapse" class="panel-collapse collapse settings-collapse">
           <div id="general">
             <div class="row">
-              <div class="form-group col-xs-12">
+              <div class="form-group col-xs-9">
                 <label for="title" class="control-label">Title</label>
                 <div>
-                  <input class="form-control" name="title" type="text" ng-model="settings.title" required>
+                  <input class="form-control" name="title" type="text" ng-model="settings.title" ng-change="showGraphs()" required>
+                </div>
+              </div>
+              <div class="form-group col-xs-3">
+                <label for="yAxis" class="control-label">Size</label>
+                <div>
+                  <select ng-model="settings.titleSize" name="title-size" class="form-control" ng-options="n for n in titleFontSizes" ng-change="showGraphs()"></select>
                 </div>
               </div>
             </div>
@@ -20,19 +26,19 @@
               <div class="form-group col-xs-4">
                 <label for="width" class="control-label">Width</label>
                 <div>
-                  <input class="form-control" name="width" type="number" ng-model="settings.width" required>
+                  <input class="form-control" name="width" type="number" ng-model="settings.width" ng-change="showGraphs()" required>
                 </div>
               </div>
               <div class="form-group col-xs-4">
                 <label for="height" class="control-label">Height</label>
                 <div>
-                  <input class="form-control" name="height" type="number" ng-model="settings.height" required>
+                  <input class="form-control" name="height" type="number" ng-model="settings.height" ng-change="showGraphs()" required>
                 </div>
               </div>
               <div class="form-group col-xs-4" ng-show="graphType==='pieChart'">
                 <label for="radius" class="control-label">Radius</label>
                 <div>
-                  <input class="form-control" name="radius" type="number" ng-model="settings.radius" required>
+                  <input class="form-control" name="radius" type="number" ng-change="showGraphs()" ng-model="settings.radius" required>
                 </div>
               </div>
             </div>
@@ -45,11 +51,11 @@
                 </div>
               </div>
             </div>
-            <div class="row" ng-show="graphType==='pieChart' || graphType==='barChart' || graphType==='histogram'">
+            <div class="row" ng-show="seriesy.length > 1">
               <div class="form-group col-xs-12">
                 <label for="multiColor" class="control-label">Multi-Color</label>
                 <div>
-                  <select class="form-control" name="multiColor" type="text" ng-model="settings.color">
+                  <select class="form-control" name="multiColor" type="text" ng-model="settings.color" ng-change="showGraphs()">
                     <option value="10">Scale 10 Colors</option>
                     <option value="20a">Scale 20 colors A</option>
                     <option value="20b">Scale 20 colors B</option>
@@ -73,7 +79,7 @@
               <div class="form-group col-xs-6">
                 <label for="displayType" class="control-label">Display Type</label>
                 <div>
-                  <select class="form-control" name="displayType" type="text" ng-model="settings.displayType">
+                  <select class="form-control" name="displayType" type="text" ng-model="settings.displayType" ng-change="showGraphs()">
                     <option value="number">Number</option>
                     <option value="percentage">Percentage</option>
                   </select>
@@ -82,7 +88,7 @@
               <div class="form-group col-xs-6">
                 <label for="groupType" class="control-label">Group By Type</label>
                 <div>
-                  <select class="form-control" name="groupType" type="text" ng-model="settings.groupType">
+                  <select class="form-control" name="groupType" type="text" ng-model="settings.groupType" ng-change="showGraphs()">
                     <option value="total">Total</option>
                     <option value="mean">Mean</option>
                   </select>
@@ -101,10 +107,16 @@
         <div id="view-xsettings-collapse" class="panel-collapse collapse settings-collapse">
           <div id="general">
             <div class="row">
-              <div class="form-group col-xs-12">
+              <div class="form-group col-xs-9">
                 <label for="xAxisLabel" class="control-label">X Axis Label</label>
                 <div>
-                  <input class="form-control" name="xAxisLabel" type="text" ng-model="settings.xAxisLabel" required>
+                  <input class="form-control" name="xAxisLabel" type="text" ng-model="settings.xAxisLabel" ng-change="showGraphs()" required>
+                </div>
+              </div>
+              <div class="form-group col-xs-3">
+                <label for="xAxisTitleSize" class="control-label">Size</label>
+                <div>
+                  <select ng-model="settings.xAxisTitleSize" name="x-axis-title-size" class="form-control" ng-options="n for n in fontSizes" ng-change="showGraphs()"></select>
                 </div>
               </div>
             </div>
@@ -112,24 +124,24 @@
               <div class="form-group col-xs-12">
                 <label for="groupType" class="control-label">Group By Type</label>
                 <div>
-                  <select class="form-control" name="groupType" type="text" ng-model="settings.groupType">
+                  <select class="form-control" name="groupType" type="text" ng-model="settings.groupType" ng-change="showGraphs()">
                     <option value="total">Total</option>
                     <option value="mean">Mean</option>
                   </select>
                 </div>
               </div>
             </div>
-            <div class="row" ng-hide="graphType==='barChart'">
+            <div class="row" ng-hide="graphType==='barChart' || graphType==='histogram' || seriesx[0].type === 'date'">
               <div class="form-group col-xs-6">
                 <label for="maxX" class="control-label">Min X Value</label>
                 <div>
-                  <input class="form-control" name="maxX" type="number" ng-model="settings.minX" required>
+                  <input class="form-control" name="maxX" type="number" ng-model="settings.minX" ng-change="showGraphs()" required>
                 </div>
               </div>
               <div class="form-group col-xs-6">
                 <label for="minX" class="control-label">Max X Value</label>
                 <div>
-                  <input class="form-control" name="minX" type="number" ng-model="settings.maxX" required>
+                  <input class="form-control" name="minX" type="number" ng-model="settings.maxX" ng-change="showGraphs()" required>
                 </div>
               </div>
             </div>
@@ -145,10 +157,16 @@
         <div id="view-ysettings-collapse" class="panel-collapse collapse settings-collapse">
           <div id="general">
             <div class="row">
-              <div class="form-group col-xs-12">
+              <div class="form-group col-xs-9">
                 <label for="yAxisLabel" class="control-label">Y Axis Label</label>
                 <div>
-                  <input class="form-control" name="yAxisLabel" type="text" ng-model="settings.yAxisLabel" required>
+                  <input class="form-control" name="yAxisLabel" type="text" ng-model="settings.yAxisLabel" ng-change="showGraphs()" required>
+                </div>
+              </div>
+              <div class="form-group col-xs-3">
+                <label for="yAxisTitleSize" class="control-label">Size</label>
+                <div>
+                  <select ng-model="settings.yAxisTitleSize" name="y-axis-title-size" class="form-control" ng-change="showGraphs()" ng-options="n for n in fontSizes"></select>
                 </div>
               </div>
             </div>
@@ -156,24 +174,24 @@
               <div class="form-group col-xs-12">
                 <label for="display" class="control-label">Display units</label>
                 <div>
-                  <select class="form-control" name="display" type="text" ng-model="settings.display">
+                  <select class="form-control" name="display" type="text" ng-model="settings.display" ng-change="showGraphs()">
                     <option value="total">Total</option>
                     <option value="percentage">Percentage</option>
                   </select>
                 </div>
               </div>
             </div>
-            <div class="row">
+            <div class="row" ng-hide="graphType==='histogram'">
               <div class="form-group col-xs-6">
                 <label for="minY" class="control-label">Min Y Value</label>
                 <div>
-                  <input class="form-control" name="minY" type="number" ng-model="settings.minY" required>
+                  <input class="form-control" name="minY" type="number" ng-model="settings.minY" ng-change="showGraphs()" required>
                 </div>
               </div>
               <div class="form-group col-xs-6">
                 <label for="maxY" class="control-label">Max Y Value</label>
                 <div>
-                  <input class="form-control" name="maxY" type="number" ng-model="settings.maxY" required>
+                  <input class="form-control" name="maxY" type="number" ng-model="settings.maxY" ng-change="showGraphs()" required>
                 </div>
               </div>
             </div>
@@ -184,24 +202,43 @@
     <div class="col-xs-12 panel-group">
       <div class="panel settings-panel">
         <div class="panel-heading">
-          <a data-toggle="collapse" data-target="#view-changedata-collapse" href="#"><h5>Change Data</h5></a>
+          <a data-toggle="collapse" data-target="#view-changexdata-collapse" href="#"><h5>Change X-Data</h5></a>
         </div>
-        <div id="view-changedata-collapse" class="panel-collapse collapse settings-collapse">
+        <div id="view-changexdata-collapse" class="panel-collapse collapse settings-collapse">
           <div id="general">
             <div class="row">
               <div class="form-group col-xs-12">
                 <label for="xAxis" class="control-label">X Axis/Data Point #1</label>
                 <div>
-                  <select ng-model="columns[0].name" name="column1" class="form-control" ng-options="col for col in allColumns" ng-change="assignColumnType(columns[0])"></select>
+                  <select ng-model="seriesx[0]" name="seriesx" class="form-control" ng-options="col.name for col in xColumns" ng-selected='seriesx[0]' ng-change="showGraphs()"></select>
                 </div>
               </div>
             </div>
-            <div class="row">
-              <div class="form-group col-xs-12">
-                <label for="yAxis" class="control-label">Y Axis/Data Point #2</label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-xs-12 panel-group" ng-hide="graphType==='histogram'">
+      <div class="panel settings-panel">
+        <div class="panel-heading">
+          <a data-toggle="collapse" data-target="#view-changedata-collapse" href="#"><h5>Change Y-Data</h5></a>
+        </div>
+        <div id="view-changedata-collapse" class="panel-collapse collapse settings-collapse">
+          <div id="general">
+            <div class="row" ng-repeat="series in seriesy">
+              <div class="form-group col-xs-9">
+                <label for="yAxis" class="control-label">Y Axis/Data Point #{{$index + 1}}</label>
                 <div>
-                  <select ng-model="columns[1].name" name="column2" class="form-control" ng-options="col for col in allColumns" ng-change="assignColumnType(columns[1])"></select>
+                  <select ng-model="seriesy[$index]" name="column2" class="form-control" ng-options="col.name for col in yColumns" ng-selected='seriesy[$index]' ng-change="showGraphs()"></select>
                 </div>
+              </div>
+              <div class="form-group col-xs-3" ng-show="seriesy.length > 1">
+                <button class='settings-panel-data-btn' ng-click="seriesy.splice($index, 1); showGraphs()"><i class="fa fa-2x fa-times remove-data-icon" aria-hidden="true"></i></button>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-xs-12">
+                <button class='data-btn' type="button"><i class="fa fa-2x fa-plus-circle settings-panel-add-data-icon" aria-hidden="true" ng-click="seriesy.push('placeholder')"></i></button>
               </div>
             </div>
           </div>
@@ -219,3 +256,16 @@
     </div>
   </div>
 </div>
+
+
+
+
+<!--  <label for="seriesy" class="control-label">Y Axis/Data Point #2</label>
+                      <div>
+                        <select ng-model="seriesy[0].name"  name="seriesy" class="form-control" ng-options="col for col in columns" ng-change="assignColumnType(seriesy[0])"></select>
+                        <button class='btn btn-primary' type="button" ng-click="counter()">+</button>
+                      </div>
+                      <div ng-repeat="data in seriesy" ng-show="$index < count">
+                    <select ng-model="seriesy[$index + 1].name"  name="yseries" class="form-control" ng-options="col for col in columns" ng-change="assignColumnType(seriesy[$index + 1])"></select>
+                          <button class='btn btn-primary' type="button" ng-click="counter()">Add Another Data Point</button>
+                </div> -->

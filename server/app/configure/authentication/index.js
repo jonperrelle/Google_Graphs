@@ -3,12 +3,11 @@ const path = require('path');
 const session = require('express-session');
 const passport = require('passport');
 const SequelizeStore = require('connect-session-sequelize')(session.Store);
-
 const ENABLED_AUTH_STRATEGIES = [
     'local',
-    'google',
-    'facebook',
-    'twitter'
+    // 'google',
+    // 'facebook',
+    // 'twitter'
 ];
 
 module.exports = function (app, db) {

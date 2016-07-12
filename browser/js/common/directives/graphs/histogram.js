@@ -1,142 +1,127 @@
-app.directive('histogram', function (d3Service, DataFactory, SVGFactory) {
+app.directive('histogram', function (d3Service, SVGFactory, graphSettingsFactory) {
   return {
     restrict: 'E',
     scope: {
       rows: "=",
-      columns: "=",
+      seriesx: '=',
       settings: "="
     },
     link: function (scope, ele, attrs) {
-      scope.column = scope.columns[0];
+      scope.column = scope.seriesx[0];
       d3Service.d3().then(function (d3) {
-        //Re-render the graph when user changes settings, data, or window size
+        
         SVGFactory.watchForChanges(scope);
 
         scope.render = function () {
           let anchor = d3.select(ele[0]);
-          anchor.selectAll('*').remove();
+          
 
-          let quantitative = scope.column.type === 'number';
+          graphSettingsFactory.getSavedSettings(scope.settings, ele[0], scope.rows, scope.seriesx, scope.seriesy, 'histogram')
+              .then(function (savedSets) {
 
-          let data = quantitative ? 
-                d3.layout.histogram()
-                  .value(d => +d[scope.column.name])
-                  .bins(15)
-                  (scope.rows.filter(obj => obj[scope.column.name] 
-                    && (!!Number(obj[scope.column.name]) || Number(obj[scope.column.name]) === 0))) : 
-                DataFactory.groupByCategory(scope.rows, scope.column.name, 'frequency', 'number'),
-              total = scope.rows.length;
+              anchor.selectAll('*').remove();
+              
+              let data = scope.rows,
+              xCol = scope.seriesx[0],
+              svg = SVGFactory.appendSVG(anchor, savedSets),
+              quantitative = xCol.type === 'number',
+              total = 0;
 
-          let xLabelLength = !quantitative ? data.reduce(function (prev, current) {
-                  let currentLength = current[scope.column.name].toString().length;
-                  return currentLength > prev ? currentLength : prev;
-              }, 0) :
-              7;
+              data.forEach( obj => {
+                total += obj.frequency;
+              });
 
-          let formatColX = scope.column.name.replace(/\_+/g, " "),
-              graphColor = scope.settings.color || '10',
-              width = scope.settings.width || ele[0].parentNode.offsetWidth,
-              height = scope.settings.height || 500,
-              titleSize = scope.settings.titleSize || height / 35,
-              xAxisLabelSize = scope.settings.xAxisLabelSize || height / 30,
-              yAxisLabelSize = scope.settings.yAxisLabelSize || height / 30,
-              margin = {
-                top: titleSize + 20,
-                right: 20,
-                bottom: ((xLabelLength + 6) * 5) + xAxisLabelSize,
-                left: 60
-              },
-              xAxisLabel = scope.settings.xAxisLabel || formatColX,
-              yAxisLabel = scope.settings.yAxisLabel || scope.settings.display === 'percentage' ? 
-                'percentage' :
-                'total',
-              title = scope.settings.title || 'frequency for ' + formatColX;
+              if (savedSets.yAxisLabel === 'Y Axis') savedSets.yAxisLabel = 'Total';
+              if (savedSets.title === 'X AXIS vs. Y AXIS') savedSets.title = 'Frequency for ' + savedSets.xAxisLabel;
+              
 
-          let color = SVGFactory.setColor(graphColor);
+              let xScale,
+                  tickType;
+              if (quantitative) {
+                xScale = d3.scale.linear()
+                      .domain([d3.min(data, d => d.x), d3.max(data, d => d.x + d.dx)])
+                      .range([0, savedSets.width - savedSets.margin.left - savedSets.margin.right]);
+                if (data[0][0][xCol.name] % 1) {
+                  tickType = d3.format('.2f');
+                } else {
+                  tickType = d3.format('f');
+                }
+              } else {
+                xScale = d3.scale.ordinal()
+                  .domain(data.map(function(d) {
+                            return d[xCol.name]; 
+                          }))
+                  .rangeBands([0, savedSets.width - savedSets.margin.left - savedSets.margin.right], 0.1);
+              }
 
-          let svg = SVGFactory.appendSVG(anchor, width, height);
+              let tickVals = data.map(d => d.x);
 
-          let xScale,
-              tickType;
-          if (quantitative) {
-            xScale = d3.scale.linear()
-                  .domain([d3.min(data, d => d.x), d3.max(data, d => d.x + d.dx)])
-                  .range([0, width - margin.left - margin.right]);
-            if (data[0][0][scope.column.name] % 1) {
-              tickType = d3.format('.2f');
-            } else {
-              tickType = d3.format('f');
-            }
-          } else {
-            xScale = d3.scale.ordinal()
-              .domain(data.map(function(d) {
-                        return d[scope.column.name]; 
-                      }))
-              .rangeBands([0, width - margin.left - margin.right], 0.1);
-          }
+              let yScale = d3.scale.linear()
+                    .range([savedSets.height - savedSets.margin.bottom, savedSets.margin.top]);
 
-          let tickVals = data.map(d => d.x);
+              if (quantitative) {
+                yScale.domain([0, d3.max(data, d => d.y)]);
+              } else {
+                yScale.domain([0, d3.max(data, d => d.frequency)]);
+              }
 
-          let yScale = d3.scale.linear()
-                .range([height - margin.bottom, margin.top]);
+              let xAxis = d3.svg.axis()
+                            .scale(xScale)
+                            .orient("bottom"),
+                  yAxis = d3.svg.axis().scale(yScale).orient("left");
 
-          if (quantitative) {
-            yScale.domain([0, d3.max(data, d => d.y)]);
-          } else {
-            yScale.domain([0, d3.max(data, d => d.frequency)]);
-          }
+              if (savedSets.display === 'percentage') {
+                yAxis.tickFormat(function (num) {
+                  return (+num * 100 / total).toFixed(2);
+                });
+              }
+              else  {
+                yAxis.tickFormat(function (num) {
+                  return num;
+                });
+              }
 
-          let xAxis = d3.svg.axis()
-                        .scale(xScale)
-                        .orient("bottom"),
-              yAxis = d3.svg.axis().scale(yScale).orient("left");
+              if (quantitative) {
+                xAxis.tickFormat(tickType)
+                  .tickValues(tickVals);
+              }
 
-          if (scope.settings.display === 'percentage') {
-            yAxis.tickFormat(function (num) {
-              return (+num * 100 / total).toFixed(2);
-            });
-          }
+              let bar = svg.selectAll('.bar')
+                    .data(data)
+                  .enter()
+                    .append('rect')
+                    .attr("class", "bar")
+                    .attr("x", function(d) {
+                      if (quantitative) {
+                        return xScale(d.x);
+                      }
+                      else {
+                        return xScale(d[xCol.name]);
+                      }
+                    })
+                    .attr("y", function(d) {
+                      return quantitative ? yScale(d.y) : yScale(d.frequency);
+                    })
+                    .attr('width', function (d) {
+                      return quantitative ? (xScale(d.dx + d3.min(data, function (d) {
+                        return d.x;
+                      })) - 1) : xScale.rangeBand();
+                    })
+                    .attr('height', function (d) {
+                      return quantitative ? (savedSets.height - savedSets.margin.bottom - yScale(d.y)) : (savedSets.height - savedSets.margin.bottom - yScale(d.frequency));
+                    })
+                    .attr("fill", function(d, i) {
+                            if(typeof savedSets.color === 'function') return savedSets.color(i);
+                            else return savedSets.color;
+                    })
+                    .attr("transform", "translate(" +savedSets.margin.left + ", 0)");
 
-          if (quantitative) {
-            xAxis.tickFormat(tickType)
-              .tickValues(tickVals);
-          }
+                  SVGFactory.appendXAxis(svg, savedSets, xAxis, 'histogram');
 
-          let bar = svg.selectAll('.bar')
-                .data(data)
-              .enter()
-                .append('rect')
-                .attr("class", "bar")
-                .attr("x", function(d) {
-                  if (quantitative) {
-                    return xScale(d.x);
-                  }
-                  else {
-                    return xScale(d[scope.column.name]);
-                  }
-                })
-                .attr("y", function(d) {
-                  return quantitative ? yScale(d.y) : yScale(d.frequency);
-                })
-                .attr('width', function (d) {
-                  return quantitative ? (xScale(d.dx + d3.min(data, function (d) {
-                    return d.x;
-                  })) - 1) : xScale.rangeBand();
-                })
-                .attr('height', function (d) {
-                  return quantitative ? (height - margin.bottom - yScale(d.y)) : (height - margin.bottom - yScale(d.frequency));
-                })
-                .attr("fill", function(d, i) {
-                        if(typeof color === 'function') return color(i);
-                        else return color;
-                })
-                .attr("transform", "translate(" + margin.left + ", 0)");
+                  SVGFactory.appendYAxis(svg, savedSets, yAxis);
 
-              SVGFactory.appendXAxis(svg, margin, width, height, xAxis, xAxisLabel, xAxisLabelSize);
-
-              SVGFactory.appendYAxis(svg, margin, height, yAxis, yAxisLabel, yAxisLabelSize);
-
-              SVGFactory.appendTitle(svg, margin, width, title, titleSize);
+                  SVGFactory.appendTitle(svg, savedSets);
+          });
         };
       });
     }

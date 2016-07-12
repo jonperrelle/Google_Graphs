@@ -1,10 +1,13 @@
-app.directive('scatterplotGraph', function(d3Service, SVGFactory) {
+
+app.directive('scatterplotGraph', function(d3Service, GraphFilterFactory, graphSettingsFactory, SVGFactory) {
+
     let directive = {};
 
     directive.restrict = 'E';
     directive.scope = {
         rows: '=',
-        columns: '=',
+        seriesx: '=',
+        seriesy: '=',
         settings: '='
     };
     directive.link = linkFn;
@@ -12,122 +15,116 @@ app.directive('scatterplotGraph', function(d3Service, SVGFactory) {
     return directive;
 
     function linkFn(scope, ele, attrs) {
-        // scope.settings = scope.settings || {};
         d3Service.d3().then(function(d3) {
-            //Re-render the graph when user changes settings, data, or window size
-                SVGFactory.watchForChanges(scope);
+
+            SVGFactory.watchForChanges(scope);
 
             scope.render = function() {
+
                 let anchor = d3.select(ele[0]);
-                anchor.selectAll('*').remove();
+               
 
-                let filteredData = scope.rows.filter(obj => obj[scope.columns[0].name] 
-                    && obj[scope.columns[1].name] 
-                    && (!!Number(obj[scope.columns[0].name]) || Number(obj[scope.columns[0].name]) === 0)
-                    && (!!Number(obj[scope.columns[1].name]) || Number(obj[scope.columns[1].name]) === 0))
-                .sort((a, b) => a[scope.columns[0].name] - b[scope.columns[0].name]);
+                graphSettingsFactory.getSavedSettings(scope.settings, ele[0], scope.rows, scope.seriesx, scope.seriesy, 'scatter')
+                    .then(function (savedSets) {
 
-                let xLabelLength = filteredData.reduce(function (prev, current) {
-                            let currentLength = current[scope.columns[0].name].toString().length;
-                            return currentLength > prev ? currentLength : prev;
-                        }, 0),
-                    yLabelLength = filteredData.reduce(function (prev, current) {
-                        let currentLength = Math.floor(current[scope.columns[1].name]).toString().length;
-                        return currentLength > prev ? currentLength : prev;
-                    }, 0);
+                        anchor.selectAll('*').remove();
+                        let svg = SVGFactory.appendSVG(anchor, savedSets);
 
-                let formatColX = scope.columns[0].name.replace(/\_+/g, " "),
-                    formatColY = scope.columns[1].name.replace(/\_+/g, " "),
-                    width = scope.settings.width || ele[0].parentNode.offsetWidth,
-                    height = scope.settings.height || 500,
-                    titleSize = scope.settings.titleSize || height / 35,
-                    xAxisLabelSize = scope.settings.xAxisLabelSize || height / 30,
-                    yAxisLabelSize = scope.settings.yAxisLabelSize || height / 30,
-                    margin = { top: 30,
-                        bottom: (xLabelLength + 6) * 5 + xAxisLabelSize,
-                        left: (yLabelLength + 6) * 7,
-                        right: 20
-                    },
-                    dotRadius = width / 150,
-                    xAxisLabel = scope.settings.xAxisLabel || formatColX,
-                    yAxisLabel = scope.settings.yAxisLabel || formatColY,
-                    title = scope.settings.title || (formatColX + ' vs. ' + formatColY).toUpperCase(),
-                    svg = SVGFactory.appendSVG(anchor, width, height);
+                            let xValue = function(d) {
+                                    return d[0]
+                                }, // data -> value
+                                xScale = d3.scale.linear()
+                                .range([savedSets.margin.left, savedSets.width - savedSets.margin.right]), // value -> display
+                                xMap = function(d) {
+                                    
+                                    return xScale(xValue(d))
+                                }, // data -> display
+                                xAxis = d3.svg.axis().scale(xScale).orient("bottom");
 
-                let xValue = function(d) {
-                        return +d[scope.columns[0].name];
-                    }, // data -> value
-                    xScale = d3.scale.linear()
-                    .range([0, width - margin.left - margin.right]), // value -> display
-                    xMap = function(d) {
-                        return xScale(xValue(d));
-                    }, // data -> display
-                    xAxis = d3.svg.axis().scale(xScale).orient("bottom");
+                            let yValue = function(d) {
+                                    return d[1]
+                                }, // data -> value
+                                yScale = d3.scale.linear().range([savedSets.height - savedSets.margin.bottom, savedSets.margin.top]), // value -> display
+                                yMap = function(d) {
+                                    return yScale(yValue(d))
+                                }, // data -> display
+                                yAxis = d3.svg.axis().scale(yScale).orient("left");
 
-                let yValue = function(d) {
-                        return +d[scope.columns[1].name];
-                    }, // data -> value
-                    yScale = d3.scale.linear().range([height - margin.bottom, margin.top]), // value -> display
-                    yMap = function(d) {
-                        return yScale(yValue(d));
-                    }, // data -> display
-                    yAxis = d3.svg.axis().scale(yScale).orient("left");
+                            let filteredValues = GraphFilterFactory.setBounds(savedSets, scope.rows);
 
-                let minX = (typeof scope.settings.minX === 'number') ? scope.settings.minX : d3.min(filteredData, xValue);
-                let maxX = (typeof scope.settings.maxX === 'number') ? scope.settings.maxX : d3.max(filteredData, xValue);
-                let minY = (typeof scope.settings.minY === 'number') ? scope.settings.minY : d3.min(filteredData, yValue);
-                let maxY = (typeof scope.settings.maxY === 'number') ? scope.settings.maxY : d3.max(filteredData, yValue);
+                            // add the tooltip area to the webpage
+                            let tooltip = d3.select("body").append("div")
+                                .attr("class", "tooltip")
+                                .style("opacity", 0);
 
-                filteredData = scope.rows.filter(obj => Number(obj[scope.columns[0].name]) >= minX 
-                    && Number(obj[scope.columns[0].name]) <= maxX
-                    && Number(obj[scope.columns[1].name]) >= minY
-                    && Number(obj[scope.columns[1].name]) <= maxY
-                    );
+                            xScale.domain([savedSets.minX, savedSets.maxX]);
+                            yScale.domain([savedSets.minY, savedSets.maxY]);
 
-                let cValue = function(d) {
-                        return d;
-                    },
-                    color = scope.settings.color || 'steelblue';
-                // add the tooltip area to the webpage
-                let tooltip = d3.select("body").append("div")
-                    .attr("class", "tooltip")
-                    .style("opacity", 0);
+                            // x-axis
+                            SVGFactory.appendXAxis(svg, savedSets, xAxis);
 
-                xScale.domain([minX, maxX]);
-                yScale.domain([minY, maxY]);
+                            // y-axis
+                            SVGFactory.appendYAxis(svg, savedSets, yAxis);
 
-                // x-axis
-                SVGFactory.appendXAxis(svg, margin, width, height, xAxis, xAxisLabel, xAxisLabelSize);
+                            let dotRadius = savedSets.height/100;
 
-                // y-axis
-                SVGFactory.appendYAxis(svg, margin, height, yAxis, yAxisLabel, yAxisLabelSize);
+                            filteredValues.forEach( (obj, idx) => {
+                                let dots = svg.selectAll(".dot" + idx)
+                                    .data(obj.values)
+                                    .enter().append("circle")
+                                    .attr("class", "dot")
+                                    .attr("r", dotRadius)
+                                    .attr("cx", d =>  {
+                                        
+                                        return xMap(d)})
+                                    .attr("cy", d => yMap(d))
+                                    .attr("fill", function(d) {
 
-                // draw dots
-                let dots = svg.selectAll(".dot")
-                    .data(filteredData)
-                    .enter().append("circle")
-                    .attr("class", "dot")
-                    .attr("r", dotRadius)
-                    .attr("cx", xMap)
-                    .attr("cy", yMap)
-                    .attr("fill", color)
-                    .attr("transform", "translate(" + margin.left + ", 0)")
-                    .on("mouseover", function(d) {
-                        tooltip.transition()
-                            .duration(200)
-                            .style("opacity", .9);
-                        tooltip.html(d[scope.columns[0].name] + "<br/> (" + xValue(d) + ", " + yValue(d) + ")")
-                            .style("left", (d3.event.pageX + 5) + "px")
-                            .style("top", (d3.event.pageY - 28) + "px");
-                    })
-                    .on("mouseout", function(d) {
-                        tooltip.transition()
-                            .duration(500)
-                            .style("opacity", 0);
+                                        if(typeof savedSets.color === 'function') return savedSets.color(idx);
+                                        else return savedSets.color;
+                                    })
+                                    .on("mouseover", function(d) {
+                                        tooltip.transition()
+                                            .duration(200)
+                                            .style("opacity", .9);
+                                        tooltip.html(obj.name + "<br/> (" + xValue(d) + ", " + yValue(d) + ")")
+                                            .style("left", (d3.event.pageX + 5) + "px")
+                                            .style("top", (d3.event.pageY - 28) + "px");
+                                    })
+                                    .on("mouseout", function(d) {
+                                        tooltip.transition()
+                                            .duration(500)
+                                            .style("opacity", 0);
+                                    });
+                            });
+
+
+                            let longestData = 0;
+                            filteredValues.forEach( obj => {
+                                  let currentLength = obj.name.toString().length;
+                                  if (currentLength > longestData) longestData = currentLength;
+                            }); 
+
+                            if (longestData < 7) longestData = 7;
+                            
+                            if (scope.seriesy && scope.seriesy.length > 1)  {
+                                if (typeof savedSets.color !== 'function') savedSets.color = d3.scale.category10();
+                                let legend = svg.selectAll(".legend")
+                                    .data(savedSets.color.domain())
+                                    .enter().append("g")
+                                        .attr("class", "legend")
+                                        .attr("transform", function(d, i) { 
+                                            return "translate(30," + (i * 15) + ")";
+                                        })
+                                        .attr('opacity', 0.7);
+
+                                SVGFactory.appendLegend(legend, filteredValues, savedSets, longestData);      
+                            }
+
+                            SVGFactory.appendTitle(svg, savedSets);
+                
                     });
-
-                SVGFactory.appendTitle(svg, margin, width, title, titleSize);
             };
         });
-    };
+    }
 });

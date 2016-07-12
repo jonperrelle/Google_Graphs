@@ -13,6 +13,26 @@
     }
 }
 
+.settings-panel-data-btn {
+    line-height: 1.428571429;
+    margin-top: 10px;
+    background: none;
+    border: none;
+
+    &:hover, :active, :focus {
+        background: none;
+        border: none;
+    }
+}
+
+.settings-panel-add-data-icon {
+    color: #eee;
+    padding-bottom: 7px;
+    &:hover {
+    color: #599ad6
+    }
+}
+
 .settings-panel {
     background: #3a424c;
     .panel-heading {

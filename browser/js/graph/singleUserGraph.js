@@ -6,10 +6,12 @@ app.config(function ($stateProvider) {
         params: {
             dataset: null,
             graphType: null,
-	    	settings: null,
-	    	data: null,
-	    	columns: null,
-            allColumns: null
+            settings: null,
+            data: null,
+            seriesx: null,
+            seriesy: null,
+            allColumns: null,
+            values: null
         }
     });
 });

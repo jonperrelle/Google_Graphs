@@ -22,11 +22,13 @@ router.delete('/:graphId', function(req, res, next) {
 router.post('/',function(req,res,next){
 
 	let user = req.requestedUser;
+
 	let settings = req.body.settings;
 
-	settings.title = settings.title || req.body.graph.columns.map(col=> col.name).join(" vs. ");
+	settings.title = settings.title || 'X Axis v. Y Axis';
 	
 	if(settings.id) delete settings.id;
+
 	
 	Promise.all([Dataset.findById(req.body.dataset.id),
 	        Settings.create(settings)])

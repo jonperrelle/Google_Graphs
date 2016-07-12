@@ -1,115 +1,128 @@
-app.directive('barChart', function(d3Service, DataFactory, SVGFactory) {
+
+app.directive('barChart', function(d3Service, graphSettingsFactory, DataFactory, SVGFactory) {
     return {
         restrict: 'E',
         scope: {
             rows: "=",
-            columns: "=",
+            seriesx: "=",
+            seriesy: '=',
             settings: "="
         },
         link: function(scope, ele, attrs) {
             d3Service.d3().then(function(d3) {
-                //Re-render the graph when user changes settings, data, or window size
+   
                 SVGFactory.watchForChanges(scope);
-
+               
                 scope.render = function() {
-                    if (!scope.columns) return;
-
-                    let filteredData = scope.rows.filter(obj => obj[scope.columns[0].name] 
-                        && obj[scope.columns[1].name]
-                        && (!!Number(obj[scope.columns[1].name]) || Number(obj[scope.columns[1].name]) === 0));
-                    let groupType = scope.settings.groupType || 'total';
-                    let orderType = scope.settings.orderType || 'sort'; 
-                    let groupedData = DataFactory.groupByCategory(filteredData, scope.columns[0].name, scope.columns[1].name, groupType);
-                    groupedData = DataFactory.orderByCategory(groupedData, scope.columns[0].name, scope.columns[0].type, orderType);
-                    
-                    let tooMuchData = groupedData.length > 50; //this can be replaced. 
+                    if (!scope.seriesy) return;
+                    let anchor = d3.select(ele[0]);
+                    let values = [];
+                    let tooMuchData = scope.rows.length > 50;
                     if (tooMuchData) {
                         d3.select(ele[0].parentElement)
                             .classed("scrolling", true);
                     }
-                    let anchor = d3.select(ele[0]);
-                    anchor.selectAll('*').remove();
+                    
+                    if (scope.settings.groupType === 'mean') values = DataFactory.groupByMean(scope.rows);
+                    else values = scope.rows; 
+                    
+                        graphSettingsFactory.getSavedSettings(scope.settings, ele[0], values, scope.seriesx, scope.seriesy, 'bar', tooMuchData)
+                            .then(function (savedSets) {
 
-                    let xLabelLength = groupedData.reduce(function (prev, current) {
-                            let currentLength = current[scope.columns[0].name].toString().length;
-                            return currentLength > prev ? currentLength : prev;
-                        }, 0),
-                        yLabelLength = groupedData.reduce(function (prev, current) {
-                            let currentLength = Math.floor(current[scope.columns[1].name]).toString().length;
-                            return currentLength > prev ? currentLength : prev;
-                        }, 0);
+                                anchor.selectAll('*').remove();
+                                let svg = SVGFactory.appendSVG(anchor, savedSets);
 
-                    let formatColX = scope.columns[0].name.replace(/\_+/g, " "),
-                        formatColY = scope.columns[1].name.replace(/\_+/g, " "),
-                        graphColor = scope.settings.color || '10',
-                        height = scope.settings.height || 500,
-                        titleSize = scope.settings.titleSize || height / 35,
-                        xAxisLabelSize = scope.settings.xAxisLabelSize || height / 30,
-                        yAxisLabelSize = scope.settings.yAxisLabelSize || height / 30,
-                        margin = {
-                        top: titleSize + 20,
-                        right: 20,
-                        bottom: ((xLabelLength + 6) * 5) + xAxisLabelSize,
-                        left: ((yLabelLength + 6) * 7) + yAxisLabelSize
-                        },
-                        width = scope.settings.width || (tooMuchData ? margin.left + margin.right + groupedData.length * 15 : ele[0].parentNode.offsetWidth),
-                        xAxisLabel = scope.settings.xAxisLabel || formatColX,
-                        yAxisLabel = scope.settings.yAxisLabel || formatColY,
-                        title = scope.settings.title || (formatColX + ' vs. ' + formatColY).toUpperCase(),
-                        barSpace = 0.1;
+                                let barSpace = 0.1;
 
-                    let svg = SVGFactory.appendSVG(anchor, width, height);
+                                let x1Scale = d3.scale.ordinal()
+                                    .rangeBands([0, savedSets.width - savedSets.margin.left - savedSets.margin.right], barSpace);
 
-                    //create the rectangles for the bar chart
-                    let x = d3.scale.ordinal()
-                        .rangeBands([0, width - margin.left - margin.right], barSpace);
+                                let x2Scale = d3.scale.ordinal();
 
-                    let y = d3.scale.linear()
-                        .range([height - margin.bottom, margin.top]);
+                                let yScale = d3.scale.linear()
+                                    .range([savedSets.height - savedSets.margin.bottom, savedSets.margin.top]);
 
-                    let xAxis = d3.svg.axis()
-                        .scale(x)
-                        .orient("bottom");
+                                let xAxis = d3.svg.axis()
+                                    .scale(x1Scale)
+                                    .orient("bottom");
 
-                    let yAxis = d3.svg.axis()
-                        .scale(y)
-                        .orient("left");
+                                let yAxis = d3.svg.axis()
+                                    .scale(yScale)
+                                    .orient("left");
 
-                    let color = SVGFactory.setColor(graphColor);
+                                let xAxisNames = [],
+                                groupCats = []
+                                values.forEach(obj => {
+                                    xAxisNames.push(obj.name);
+                                    obj.values.forEach(arr => {
+                                        if (groupCats.indexOf(arr[0]) === -1) groupCats.push(arr[0]);
+                                    });
+                                });
 
-                    let minY = (typeof scope.settings.minY === 'number') ? scope.settings.minY : 0,
-                    maxY = (typeof scope.settings.maxY === 'number') ? scope.settings.maxY : d3.max(groupedData, function(d) {
-                            return +d[scope.columns[1].name]; });
+                                x1Scale.domain(xAxisNames);
+                                x2Scale.domain(groupCats).rangeRoundBands([0, x1Scale.rangeBand()]);
+                                yScale.domain([savedSets.minY, savedSets.maxY]);
 
-                    x.domain(groupedData.map(function(d) {
-                        return d[scope.columns[0].name]; }));
+                                SVGFactory.appendXAxis(svg, savedSets, xAxis, 'bar');
 
-                    y.domain([minY, maxY]);
+                                SVGFactory.appendYAxis(svg, savedSets, yAxis);
 
-                    SVGFactory.appendXAxis(svg, margin, width, height, xAxis, xAxisLabel, xAxisLabelSize);
+                                SVGFactory.appendTitle(svg, savedSets);
 
-                    SVGFactory.appendYAxis(svg, margin, height, yAxis, yAxisLabel, yAxisLabelSize);
+                                let idx = 0
+                                var yData = svg.selectAll("yData")
+                                    .data(values)
+                                    .enter().append("g")
+                                    .attr("class", "yData")
+                                    .attr("transform", function(d) { 
+                                        return "translate(" + x1Scale(d.name) + ",0)"; 
+                                    });
 
-                    svg.selectAll(".bar")
-                        .data(groupedData)
-                        .enter().append("rect")
-                        .attr("class", "bar")
-                        .attr("x", function(d) {
-                            return x(d[scope.columns[0].name]); })
-                        .attr("width", tooMuchData ? 10 : x.rangeBand())
-                        .attr("y", function(d) {
-                            return y(+d[scope.columns[1].name]);
-                        })
-                        .attr("height", function(d) {
-                            return height - margin.bottom - y(+d[scope.columns[1].name]);
-                        })
-                        .attr("fill", function(d, i) {
-                                if(typeof color === 'function') return color(i);
-                                else return color;
-                        })
-                        .attr("transform", "translate(" + margin.left + ", 0)");
+                                 yData.selectAll(".bar")
+                                    .data(d =>  {
+                                        return d.values;
+                                    })
+                                    .enter().append("rect")
+                                    .attr("class", "bar")
+                                    .attr("x", function(d) {
+                                        return x2Scale(d[0]); })
+                                    .attr("width", tooMuchData ? 10/scope.seriesy.length : x2Scale.rangeBand())
+                                    .attr("y", function(d) {
+                                        return yScale(d[1]);
+                                    })
+                                    .attr("height", function(d) {
+                                        return savedSets.height - savedSets.margin.bottom - yScale(d[1]);
+                                    })
+                                    .attr("fill", function(d, i) {
+                                            if(typeof savedSets.color === 'function') return savedSets.color(i);
+                                            else return savedSets.color;
+                                        })
+                                    .attr("transform", "translate(" + savedSets.margin.left + ", 0)");
 
-                    SVGFactory.appendTitle(svg, margin, width, title, titleSize);
+                                
+                                let longestData = 0;
+                                scope.seriesy.forEach( arr => {
+                                      let currentLength = arr.name.toString().length;
+                                      if (currentLength > longestData) longestData = currentLength;
+                                }); 
+
+                                if (longestData < 7) longestData = 7;
+
+                                if (scope.seriesy && scope.seriesy.length > 1) {
+                                    if (typeof savedSets.color !== 'function') savedSets.color = d3.scale.category10();
+                                    let legend = svg.selectAll(".legend")
+                                        .data(savedSets.color.domain())
+                                        .enter().append("g")
+                                            .attr("class", "legend")
+                                            .attr("transform", function(d, i) { 
+                                                return "translate(30," + (i * 15) + ")";
+                                            })
+                                            .attr('opacity', 0.7);
+                               
+                                    SVGFactory.appendLegend(legend, scope.seriesy, savedSets, longestData);
+                                }
+                            
+                    });
                 };
             });
         }

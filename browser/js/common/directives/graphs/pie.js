@@ -1,110 +1,91 @@
-app.directive('pieChart', function(d3Service, DataFactory, SVGFactory) {
+
+app.directive('pieChart', function(d3Service, SVGFactory, graphSettingsFactory, DataFactory) {
+
 
     return {
         restrict: 'E',
         scope: {
             rows: "=",
-            columns: "=",
+            seriesx: "=",
+            seriesy: "=",
             settings: "="
         },
 
         link: function(scope, ele, attrs) {
             d3Service.d3().then(function(d3) {
+
                 //Re-render the graph when user changes settings, data, or window size
                 SVGFactory.watchForChanges(scope);
 
                 scope.render = function() {
                         let anchor = d3.select(ele[0]);
-                        anchor.selectAll('*').remove();
-
-                        let formatColX = scope.columns[0].name.replace(/\_+/g, " "),
-                            formatColY = scope.columns[1].name.replace(/\_+/g, " "),
-                            graphColor = scope.settings.color || '20a',
-                            margin = { top: 30, right: 20, bottom: 30, left: 40 },
-                            width = scope.settings.width || ele[0].parentNode.offsetWidth,
-                            height = scope.settings.height || 500,
-                            titleSize = scope.settings.titleSize || height / 35,
-                            radius = scope.settings.radius || height / 3,
-                            title = scope.settings.title || (formatColX + ' vs. ' + formatColY).toUpperCase(),
-                            displayType = scope.settings.displayType || 'number';
-
-                        let filteredData = scope.rows.filter(obj => Number(obj[scope.columns[1].name]) > 0);
                         
-                        let groupType = scope.settings.groupType || 'total';
+                        let values = [];
 
-                        let groupedData = DataFactory.groupByCategory(filteredData, scope.columns[0].name, scope.columns[1].name, groupType);
-                        groupedData = DataFactory.orderByCategory(groupedData, scope.columns[0].name);
+                        if (scope.settings.groupType === 'mean') values = DataFactory.groupByMean(scope.rows);
+                        else values = scope.rows;
 
-                        let groupedTotal = 0;
-                        groupedData.forEach( a => groupedTotal += a[scope.columns[1].name]);
-                        //uses build in d3 method to create color scale
+                        graphSettingsFactory.getSavedSettings(scope.settings, ele[0], values, scope.seriesx, scope.seriesy, 'pie')
+                            .then(function (savedSets) {
+                                anchor.selectAll('*').remove();
+                                let svg = SVGFactory.appendSVG(anchor, savedSets);
 
-                        let color = SVGFactory.setColor(graphColor);
+                                let groupedTotal = 0;
+                            
+                                values.forEach( a => groupedTotal += a.values[0][1]);
+                                
+                                 
+                                let pie = d3.layout.pie().value(function(d) {
+                                    return d.values[0][1];
+                                });        
+                                
+                                let arc = d3.svg.arc().outerRadius(savedSets.radius);
 
-                        let svg = SVGFactory.appendSVG(anchor, width, height);
-                        svg.data([groupedData]);
+                                let pieChart = svg.selectAll(".arc")
+                                    .data(pie(values))
+                                    .enter().append("g")
+                                    .attr("class", "arc")
+                                    .attr("transform", "translate(" + savedSets.width / 2 + "," + savedSets.height / 2 + ")");
+ 
+                                pieChart.append("path")
+                                      .attr("d", arc)
+                                      .style("fill", function(d, i) { return savedSets.color(i); })
 
-                        let pie = d3.layout.pie().value(function(d) {
-                            return +d[scope.columns[1].name];
-                        });
+                                SVGFactory.appendTitle(svg, savedSets);
 
-                        // declare an arc generator function
-                        let arc = d3.svg.arc().outerRadius(radius);
-                     
-                        // select paths, use arc generator to draw
-                        let arcs = svg.selectAll("slice")
-                            .data(pie)
-                            .enter()
-                            .append("g")
-                            .attr("class", "slice")
-                            .attr("transform", "translate(" + (width / 1.75) + "," + (radius *1.5) + ")");
+                                let legendDisplay = (type, data) => {
+                                    if (type === 'percentage') return ((data[1]/groupedTotal) * 100).toFixed(2) + "%";
+                                    else return data[1];
+                                };
 
-                        arcs.append("path")
-                            .attr("fill", function(d, i) {
-                                return color(i);
-                            })
-                            .attr("d", arc);
 
-                        SVGFactory.appendTitle(svg, margin, width, title, titleSize);
+                                let legend = svg.selectAll(".legend")
+                                    .data(savedSets.color.domain())
+                                    .enter().append("g")
+                                        .attr("class", "legend")
+                                        .attr("transform", function(d, i) { 
+                                            console.log()
+                                            return "translate(" + (savedSets.width / 1.75) + "," + ((savedSets.radius * 1.5) + (i * 20 + 10)) + ")";
+                                        });
 
-                        //add the text
-                        // arcs.append("text").attr("transform", function(d) {
-                        //     d.innerRadius = radius+100;
-                        //     d.outerRadius = radius+100;
-                        //     return "translate(" + arc.centroid(d) + ")";
-                        // }).attr("text-anchor", "middle").text(function(d, i) {
-                        //     return groupedData[i][scope.columns[1].name];
-                        // });
+                                // draw legend colored rectangles
+                                legend.append("rect")
+                                    .attr("x", -savedSets.width/2 - savedSets.margin.left/2)
+                                    .attr("y", (savedSets.radius * -1.5) + savedSets.margin.top/2)
+                                    .attr("width", savedSets.width/100)
+                                    .attr("height", savedSets.height/100)
+                                    .style("fill", function(d, i) { return savedSets.color(i); });
 
-                        let legendDisplay = (type, data) => {
-                            if (type === 'percentage') return ((data/groupedTotal) * 100).toFixed(2) + "%";
-                            else return data;
-                        };
+                                // draw legend text
+                                legend.append("text")
+                                    .attr("x", -savedSets.width/2)
+                                    .attr("y", (savedSets.radius * -1.5) + savedSets.margin.top/2 + savedSets.height/100)
+                                    .text(function(d, i) { 
+                                        return values[i].name + " - " + legendDisplay(savedSets.displayType, values[i].values[0]);
+                                    });
 
-                        let legend = svg.selectAll(".legend")
-                            .data(color.domain())
-                            .enter().append("g")
-                                .attr("class", "legend")
-                                .attr("transform", function(d, i) { 
-                                    return "translate(" + (width / 1.75) + "," + ((radius * 1.5) + (i * 20 + 10)) + ")";
-                                });
-
-                        // draw legend colored rectangles
-                        legend.append("rect")
-                            .attr("x", -width/2 - margin.left/2)
-                            .attr("y", (radius * -1.5) + margin.top/2)
-                            .attr("width", width/100)
-                            .attr("height", height/100)
-                            .style("fill", color);
-
-                        // draw legend text
-                        legend.append("text")
-                            .attr("x", -width/2)
-                            .attr("y", (radius * -1.5) + margin.top/2 + height/100)
-                            .text(function(d, i) { 
-                                return groupedData[i][scope.columns[0].name] + " - " + legendDisplay(displayType, +groupedData[i][scope.columns[1].name]);
-                            });
-                    };
+                    });
+                };
                     
             });
         }

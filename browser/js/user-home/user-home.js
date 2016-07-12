@@ -11,18 +11,35 @@ app.config(function($stateProvider) {
     });
 });
 
-app.controller('UserHomeCtrl', function($scope, $state, UploadFactory, Session, DatasetFactory, GraphFactory, UserInfo, $localStorage) {
+app.controller('UserHomeCtrl', function($scope, $state, UploadFactory, Session, DatasetFactory, GraphFactory, UserInfo, ValidationFactory, GraphFilterFactory, $localStorage) {
 
     $scope.user = UserInfo.user;
     $scope.datasets = UserInfo.datasets;
     $scope.graphs = UserInfo.graphs;
 
-    
     $scope.goToUserGraph = function(graph) {
         DatasetFactory.getOneUserDataset(graph.dataset, $scope.user)
             .then(rows => {
-                let allColumns = Object.keys(rows[0]);
-                $state.go('userSingleGraph', { userId: $scope.user.id, graphId: graph.id, dataset: graph.dataset, graphType: graph.graphType, settings: graph.setting, data: rows, columns: graph.columns, allColumns: allColumns });
+                let allColumns = ValidationFactory.assignColumnNameAndType(rows, Object.keys(rows[0]));
+                if (graph.graphType === 'barChart' || graph.graphType === 'pieChart') {
+                    GraphFilterFactory.filterBarAndPieData(graph.seriesx, graph.seriesy, rows)
+                    .then(function (values) {
+                        $state.go('userSingleGraph', { userId: $scope.user.id, graphId: graph.id, dataset: graph.dataset, graphType: graph.graphType, settings: graph.setting, data: rows, seriesx: graph.seriesx, seriesy: graph.seriesy, allColumns: allColumns, values: values });
+                    });
+                }
+                else if (graph.graphType === 'histogram') {
+                    GraphFilterFactory.filterHistogramData(graph.seriesx, rows)
+                    .then(function (values) {
+                        $state.go('userSingleGraph', { userId: $scope.user.id, graphId: graph.id, dataset: graph.dataset, graphType: graph.graphType, settings: graph.setting, data: rows, seriesx: graph.seriesx, allColumns: allColumns, values: values });
+                    });
+                }
+                else { 
+                    GraphFilterFactory.filterLineAndScatterData(graph.seriesx, graph.seriesy, rows)
+                    .then(function(values) {
+                        $state.go('userSingleGraph', { userId: $scope.user.id, graphId: graph.id, dataset: graph.dataset, graphType: graph.graphType, settings: graph.setting, data: rows, seriesx: graph.seriesx, seriesy: graph.seriesy, allColumns: allColumns, values: values });
+                    });
+                }    
+                
             })
             .catch();
     };

@@ -1,146 +1,121 @@
-app.directive('lineGraph', function(d3Service, SVGFactory) {
+
+app.directive('lineGraph', function(d3Service, SVGFactory, GraphFilterFactory, graphSettingsFactory) {
+
     return {
         restrict: 'E',
         scope: {
             rows: "=",
-            columns: "=",
+            seriesx: '=',
+            seriesy: '=',
             settings: "="
         },
         link: function(scope, ele, attrs) {
+
             d3Service.d3().then(function(d3) {
-                //Re-render the graph when user changes settings, data, or window size
+             
                 SVGFactory.watchForChanges(scope);
 
-                scope.render = function() {
-                    //this doesn't work for line graphs, because line graphs can have a date
-                    let filteredData = scope.rows.filter(obj => obj[scope.columns[0].name] 
-                            && obj[scope.columns[1].name]
-                            && (!!Number(obj[scope.columns[0].name]) || Number(obj[scope.columns[0].name]) === 0 || scope.columns[0].type === 'date')
-                            && (!!Number(obj[scope.columns[1].name]) || Number(obj[scope.columns[1].name]) === 0))
-                    
-                    if(scope.columns[0].type == 'number'){
-                        filteredData = filteredData.sort((a, b) => a[scope.columns[0].name] - b[scope.columns[0].name]);
-                    }
+                scope.render = function() {   
 
                     let anchor = d3.select(ele[0])
-                    anchor.selectAll('*').remove();
+                                          
 
-                    let xLabelLength = filteredData.reduce(function (prev, current) {
-                            let currentLength = current[scope.columns[0].name].toString().length;
-                            return currentLength > prev ? currentLength : prev;
-                        }, 0),
-                    yLabelLength = filteredData.reduce(function (prev, current) {
-                        let currentLength = Math.floor(current[scope.columns[1].name]).toString().length;
-                        return currentLength > prev ? currentLength : prev;
-                    }, 0);
+                    graphSettingsFactory.getSavedSettings(scope.settings, ele[0], scope.rows, scope.seriesx, scope.seriesy, 'line')
+                        .then(function (savedSets) {
+                            anchor.selectAll('*').remove(); 
+                            let svg = SVGFactory.appendSVG(anchor, savedSets);
 
-                    let formatColX = scope.columns[0].name.replace(/\_+/g, " "),
-                        formatColY = scope.columns[1].name.replace(/\_+/g, " "),
-                        width = scope.settings.width || ele[0].parentNode.offsetWidth,
-                        height = scope.settings.height || 500,
-                        titleSize = scope.settings.titleSize || height / 35,
-                        xAxisLabelSize = scope.settings.xAxisLabelSize || height / 30,
-                        yAxisLabelSize = scope.settings.yAxisLabelSize || height / 30,
-                        margin = { 
-                            top: 30,
-                            right: 20,
-                            bottom: (xLabelLength + 6) * 5 + xAxisLabelSize,
-                            left: (yLabelLength + 6) * 7,
-                        },
-                        xAxisLabel = scope.settings.xAxisLabel || formatColX,
-                        yAxisLabel = scope.settings.yAxisLabel || formatColY,
-                        title = scope.settings.title || (formatColX + " .vs " + formatColY).toUpperCase(),
-                        svg = SVGFactory.appendSVG(anchor, width, height);
+                            let x; 
 
-                    //check if the data column header may contain date info ??
-                    let xScale,
-                        dateFormat,
-                        data;
+                            //create scales and x/y axes
+                            if(scope.seriesx[0].type == 'number') x = d3.scale.linear().range([savedSets.margin.left, savedSets.width - savedSets.margin.right]);
+                            else {
+                                x = d3.time.scale().range([savedSets.margin.left, savedSets.width - savedSets.margin.right])
+                            };  
 
-                    if (scope.columns[0].type === 'date') {
-                        //if so validate the format of the date
-                        //run date checking function
-                        let commonDateFormats = ["%Y", "%Y-%y", "%x", "%m-%d-%Y", "%m.%d.%Y", "%m/%d/%y", "%m-%d-%y", "%m.%d.%y", "%Y/%m/%d", "%Y-%m-%d", "%Y.%m.%d", "%xT%X", "%m-%d-%YT%X", "%m.%d.%YT%X", "%m/%d/%yT%X", "%m-%d-%yT%X", "%m.%d.%yT%X", "%Y-%m-%dT%X", "%Y/%m/%dT%X", "%Y.%m.%dT%X", "%c"];
-                        dateFormat = commonDateFormats.filter(f => d3.time.format(f).parse(filteredData[0][scope.columns[0].name]))[0];
-                        let formatDate = d3.time.format(dateFormat); //d3.time.format("%Y-%y");
-                        data = [];
-                        filteredData.forEach(function(element) {
-                            let obj = {};
-                            obj[scope.columns[0].name] = formatDate.parse(element[scope.columns[0].name]);
-                            obj[scope.columns[1].name] = element[scope.columns[1].name];
-                            data.push(obj);
-                        });
 
-                        data = data.sort((a, b) => a[scope.columns[0].name].getTime() - b[scope.columns[0].name].getTime());
-                        
-                        xScale = d3.time.scale().range([0, width - margin.left - margin.right]);
-                    } else if (scope.columns[0].type === 'number') {
-                        xScale = d3.scale.linear().range([0, width - margin.left - margin.right]);
-                        data = [];
-                        filteredData.forEach(function(element) {
-                            let obj = {};
-                            obj[scope.columns[0].name] = +(element[scope.columns[0].name]);
-                            obj[scope.columns[1].name] = element[scope.columns[1].name];
-                            data.push(obj);
-                        });
-                    } else {
-                        return;
-                    }
+                            let y = d3.scale.linear()
+                                .range([savedSets.height - savedSets.margin.bottom, savedSets.margin.top]);
 
-                    let yScale = d3.scale.linear()
-                        .range([height - margin.bottom, margin.top]);
+                            let xAxis = d3.svg.axis()
+                                .scale(x)
+                                .orient("bottom");
 
-                    let xAxis = d3.svg.axis()
-                        .scale(xScale)
-                        .orient("bottom");
+                            let yAxis = d3.svg.axis()
+                                .scale(y)
+                                .orient("left");
 
-                    let yAxis = d3.svg.axis()
-                        .scale(yScale)
-                        .orient("left");
+                            let line = d3.svg.line()
+                                .x(function(d) {
+                                    return x(d[0]);
+                                })
+                                .y(function(d) {
+                                    return y(d[1]);
+                                });
 
-                    let line = d3.svg.line()
-                        .x(function(d) {
-                            return xScale(d[scope.columns[0].name]);
-                        })
-                        .y(function(d) {
-                            return yScale(+d[scope.columns[1].name]);
-                        });
+                            x.domain([savedSets.minX, savedSets.maxX]);
+                            y.domain([savedSets.minY, savedSets.maxY]);
 
-                    // If we don't pass any data, return out of the element
-                    if (!data) return;
+                            //filter values to remain within min and max values of graph
+                            let filteredValues = GraphFilterFactory.setBounds(savedSets, scope.rows);
 
-                    //Need a better way to adjust minX and maxX if based on date
+                            //xAxis
+                            SVGFactory.appendXAxis(svg, savedSets, xAxis);
 
-                    let color = scope.settings.color || "steelblue",
-                        minX = (typeof scope.settings.minX === 'number') ? scope.settings.minX : d3.min(data, function(d) {
-                            return d[scope.columns[0].name];
-                        }),
-                        maxX = (typeof scope.settings.maxX === 'number') ? scope.settings.maxX : d3.max(data, function(d) {
-                            return d[scope.columns[0].name];
-                        }),
-                        minY = (typeof scope.settings.minY === 'number') ? scope.settings.minY : d3.min(data, function(d) {
-                            return +d[scope.columns[1].name];
-                        }),
-                        maxY = (typeof scope.settings.maxY === 'number') ? scope.settings.maxY : d3.max(data, function(d) {
-                            return +d[scope.columns[1].name];
-                        });
+                            svg.select(".xlabel")
+                                .attr("transform", "translate(" + (savedSets.width - savedSets.margin.left - savedSets.margin.right) / 2 + ", " + (savedSets.margin.bottom - 10) + ")");
 
-                    xScale.domain([minX, maxX]);
-                    yScale.domain([minY, maxY]);
+                            //yAxis
+                            SVGFactory.appendYAxis(svg, savedSets, yAxis);
 
-                    SVGFactory.appendXAxis(svg, margin, width, height, xAxis, xAxisLabel, xAxisLabelSize);
+                            let yData = svg.selectAll("yData")
+                                .data(filteredValues)
+                                .enter().append("g")
+                                .attr("class", "yData"); 
 
-                    SVGFactory.appendYAxis(svg, margin, height, yAxis, yAxisLabel, yAxisLabelSize);
+                            yData.append("path")
+                                .attr("d", function(d){
+                                   
+                                    return line(d.values);
+                                })
+                                .attr('fill', 'none')
+                                .attr("data-legend",function(d) { 
+                                    return d.name
+                                })
+                                .attr("stroke", function(d, i) {
+                                    if(typeof savedSets.color === 'function') return savedSets.color(i)
+                                    else return savedSets.color;
+                                })
+                                .attr("stroke-width", 2);
 
-                    svg.append("path")
-                        .datum(data)
-                        .attr("d", line)
-                        .attr("transform", "translate(" + margin.left + ", 0)")
-                        .attr('fill', 'none')
-                        .attr("stroke", color)
-                        .attr("stroke-width", 2);
+                           // find longest string for setting legend x attribute
+                            let longestData = 0;
+                            filteredValues.forEach( obj => {
+                                  let currentLength = obj.name.toString().length;
+                                  if (currentLength > longestData) longestData = currentLength;
+                            }); 
 
-                    SVGFactory.appendTitle(svg, margin, width, title, titleSize);
+                            if (longestData < 7) longestData = 7;
+             
+                            // create legend if it is a multi-series graph
+                            if (scope.seriesy && scope.seriesy.length > 1)  { 
+                                if (typeof savedSets.color !== 'function') savedSets.color = d3.scale.category10();
+                                let legend = svg.selectAll(".legend")
+                                    .data(savedSets.color.domain())
+                                    .enter().append("g")
+                                        .attr("class", "legend")
+                                        .attr("transform", function(d, i) { 
+                                            return "translate(30," + (i * 15) + ")";
+                                        })
+                                        .attr('opacity', 0.7);
+
+                                SVGFactory.appendLegend(legend, filteredValues, savedSets, longestData);      
+                            }
+
+                            SVGFactory.appendTitle(svg, savedSets);
+                            
+
+                    });
                 };
             });
         }

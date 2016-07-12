@@ -8,10 +8,11 @@
 		</header>
 		<div class="row">
 			<div class="graph-container col-sm-9 col-xs-12">
-				  <scatterplot-graph settings="settings" ng-if="graphType === 'scatterPlot'" rows="data" columns="columns"></scatterplot-graph>
-				  <line-graph settings="settings" ng-if="graphType === 'lineGraph'" rows="data" columns="columns"></line-graph>
-				  <pie-chart settings="settings" rows="data" columns="columns" ng-if="graphType === 'pieChart'"></pie-chart>
-				  <bar-chart settings="settings" rows="data" columns="columns" ng-if="graphType === 'barChart'"></bar-chart>
+				  <scatterplot-graph settings="settings" ng-if="graphType === 'scatterPlot'" rows="values" seriesy="seriesy" seriesx="seriesx"></scatterplot-graph>
+				 <line-graph ng-if="graphType === 'lineGraph'" rows="values" seriesy="seriesy" seriesx="seriesx" settings="settings"></line-graph>
+				  <pie-chart rows="values" seriesy="seriesy" seriesx="seriesx" settings="settings" ng-if="graphType === 'pieChart'"></pie-chart>
+				  <bar-chart settings="settings" rows="values" seriesy="seriesy" seriesx="seriesx"  ng-if="graphType === 'barChart'"></bar-chart>
+				  <histogram settings="settings" rows="values" seriesx="seriesx" ng-if="graphType === 'histogram'"></histogram>
 			</div>
 			<div class="col-sm-3 col-xs-12 settings-container">
 				<settings-panel></settings-panel>
